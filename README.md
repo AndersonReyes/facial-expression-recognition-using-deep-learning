@@ -1,5 +1,5 @@
 # DeepFaceRecognition
-Facial Expression Recognition using tensorflow on the FER2013 dataset using tensorflow. I got about 50% accurary.
+Facial Expression Recognition using tensorflow on the FER2013 dataset using convolutional networks. I got about 50% accurary.
 
 Architecture is very simple:  
 Conv [32]  
