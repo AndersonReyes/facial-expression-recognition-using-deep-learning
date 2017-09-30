@@ -63,7 +63,7 @@ def load_data(path, expect_labels=True):
 
 def conv2d(x, filter_shape):
     """
-        :x:     input layer  
+        :x:     input layer
         :filter_shape:  (w, h, input_sz, output_sz)
     """
     assert len(filter_shape) == 4
@@ -99,10 +99,10 @@ def max_pool(x, pool_shape):
     ksize = [1, pool_shape[0], pool_shape[1], 1]
     return tf.nn.max_pool(x, ksize=ksize, strides=ksize, padding='SAME')
 
-emotion_dict = { 0: 'Angry', 1: 'Disgust', 2: 'Fear', 3: 'Happy', 
+emotion_dict = {0: 'Angry', 1: 'Disgust', 2: 'Fear', 3: 'Happy',
                 4: 'Sad', 5: 'Surprise', 6: 'Neutral'}
 
-X_all, Y_all = load_data('../data/fer2013.csv')
+X_all, Y_all = load_data('data/fer2013.csv')
 assert len(X_all) == len(Y_all)
 
 # save 20% for testing
@@ -118,14 +118,17 @@ x = tf.placeholder(dtype=tf.float32, shape=[None, 2304], name='Input')
 x_shaped = tf.reshape(x, [-1, 48, 48, 1])
 y = tf.placeholder(dtype=tf.float32, shape=[None, 7], name='Output')
 
-conv_layer1 = relu(conv2d(x_shaped, [5, 5, 1, 32]))
-max_pool_layer1 = max_pool(conv_layer1, [2, 2])
-conv_layer2 = relu(conv2d(max_pool_layer1, [5, 5, 32, 64]))
-max_pool_layer2 = max_pool(conv_layer2, [2, 2])
-conv_layer3 = relu(conv2d(max_pool_layer2, [5, 5, 64, 128]))
-max_pool_layer3 = max_pool(conv_layer3, [2, 2])
-fc_layer4 = fully_connected(max_pool_layer3, [6 * 6 * 128, 1000])
-y_predict = output_layer(fc_layer4, [1000, 7])
+layer1 = relu(conv2d(x_shaped, [5, 5, 1, 64]))
+layer1 = relu(conv2d(layer1, [5, 5, 64, 64]))
+layer1 = relu(conv2d(layer1, [5, 5, 64, 64]))
+layer1 = max_pool(layer1, [2, 2])
+
+layer2 = relu(conv2d(layer1, [5, 5, 64, 128]))
+layer2 = relu(conv2d(layer2, [5, 5, 128, 128]))
+layer2 = max_pool(layer2, [2, 2])
+
+fc_layer3 = fully_connected(layer2, [12 * 12 * 128, 512])
+y_predict = output_layer(fc_layer3, [512, 7])
 
 entropy_cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=y_predict, labels=y))
 optimiser = tf.train.AdamOptimizer(learning_rate=alpha).minimize(entropy_cost)
@@ -134,10 +137,10 @@ accurary = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
 init_op = tf.global_variables_initializer()
 
+print('Starting training.........')
 with tf.Session() as sess:
     sess.run(init_op)
-    writer = tf.summary.FileWriter('./../data/graphs', sess.graph) 
-
+    writer = tf.summary.FileWriter('./data/graphs', sess.graph)
     n_batches = int(len(X_train) / batch_size)
 
     for epoch in range(epochs):
@@ -149,10 +152,10 @@ with tf.Session() as sess:
             batch_y = Y_train[idx: idx + batch_size]
             _, result = sess.run([optimiser, entropy_cost], feed_dict={x: batch_x, y: batch_y})
             avg_cost += result / n_batches
-        
+
         test_accuracy = sess.run(accurary, feed_dict={x: X_test, y: Y_test})
         print('Epoch:', (epoch + 1), 'cost = ', '{:.3f}'.format(avg_cost),
-        ' test accuracy: {:.3f}'.format(test_accuracy))
+              ' test accuracy: {:.3f}'.format(test_accuracy))
 
     print('\nTraining Complete')
     print('accurary:', sess.run(accurary, feed_dict={x: X_test, y: Y_test}))
