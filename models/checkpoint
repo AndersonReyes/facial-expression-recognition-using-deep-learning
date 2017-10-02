@@ -1,0 +1,2 @@
+model_checkpoint_path: "32_64_128_fc512_100epochs"
+all_model_checkpoint_paths: "32_64_128_fc512_100epochs"

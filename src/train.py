@@ -111,8 +111,8 @@ X_train, Y_train = X_all[:test_start, :], Y_all[:test_start, :]
 X_test, Y_test = X_all[test_start:, :], Y_all[test_start:, :]
 
 alpha = 0.0001
-epochs = 10
-batch_size = 50
+epochs = 100
+batch_size = 250
 
 x = tf.placeholder(dtype=tf.float32, shape=[None, 2304], name='Input')
 x_shaped = tf.reshape(x, [-1, 48, 48, 1])
@@ -134,9 +134,12 @@ accurary = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
 init_op = tf.global_variables_initializer()
 
+
+saver = tf.train.Saver()
+
 with tf.Session() as sess:
     sess.run(init_op)
-    writer = tf.summary.FileWriter('./../data/graphs', sess.graph) 
+    writer = tf.summary.FileWriter('./../data/graphs', sess.graph)
 
     n_batches = int(len(X_train) / batch_size)
 
@@ -149,12 +152,13 @@ with tf.Session() as sess:
             batch_y = Y_train[idx: idx + batch_size]
             _, result = sess.run([optimiser, entropy_cost], feed_dict={x: batch_x, y: batch_y})
             avg_cost += result / n_batches
-        
+
         test_accuracy = sess.run(accurary, feed_dict={x: X_test, y: Y_test})
         print('Epoch:', (epoch + 1), 'cost = ', '{:.3f}'.format(avg_cost),
-        ' test accuracy: {:.3f}'.format(test_accuracy))
+              ' test accuracy: {:.3f}'.format(test_accuracy))
 
     print('\nTraining Complete')
     print('accurary:', sess.run(accurary, feed_dict={x: X_test, y: Y_test}))
+    saver.save(sess, '32_64_128_fc512_100epochs')
 
 writer.close()
