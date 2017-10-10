@@ -61,7 +61,7 @@ def load_data(path, expect_labels=True):
     return preprocess(X), y
 
 
-def conv2d(x, filter_shape):
+def conv2d(x, filter_shape, name):
     """
         :x:     input layer  
         :filter_shape:  (w, h, input_sz, output_sz)
@@ -69,7 +69,7 @@ def conv2d(x, filter_shape):
     assert len(filter_shape) == 4
     W = tf.Variable(tf.truncated_normal(filter_shape, stddev=0.03))
     B = tf.Variable(tf.constant(0.1, shape=[filter_shape[-1]]))
-    layer = tf.nn.conv2d(x, W, strides=[1, 1, 1, 1], padding='SAME') + B
+    layer = tf.nn.conv2d(x, W, strides=[1, 1, 1, 1], padding='SAME', name=name) + B
     return layer
 
 
@@ -77,20 +77,20 @@ def relu(x):
     return tf.nn.relu(x)
 
 
-def fully_connected(x, shape):
+def fully_connected(x, shape, name):
     assert len(shape) == 2
     W = tf.Variable(tf.truncated_normal(shape, stddev=0.03))
     B = tf.Variable(tf.constant(0.1, shape=[shape[-1]]))
     X_flat = tf.reshape(x, [-1, shape[0]])
-    layer = relu(tf.matmul(X_flat, W) + B)
+    layer = relu(tf.matmul(X_flat, W, name=name) + B)
     return layer
 
 
-def output_layer(x, shape):
+def output_layer(x, shape, name):
     assert len(shape) == 2
     W = tf.Variable(tf.truncated_normal(shape, stddev=0.03))
     B = tf.Variable(tf.constant(0.1, shape=[shape[-1]]))
-    layer = tf.matmul(x, W) + B
+    layer = tf.matmul(x, W, name='y_predict') + B
     return layer
 
 
@@ -99,10 +99,10 @@ def max_pool(x, pool_shape):
     ksize = [1, pool_shape[0], pool_shape[1], 1]
     return tf.nn.max_pool(x, ksize=ksize, strides=ksize, padding='SAME')
 
-emotion_dict = { 0: 'Angry', 1: 'Disgust', 2: 'Fear', 3: 'Happy', 
+emotion_dict = {0: 'Angry', 1: 'Disgust', 2: 'Fear', 3: 'Happy', 
                 4: 'Sad', 5: 'Surprise', 6: 'Neutral'}
 
-X_all, Y_all = load_data('../data/fer2013.csv')
+X_all, Y_all = load_data('../data/fer2013/fer2013.csv')
 assert len(X_all) == len(Y_all)
 
 # save 20% for testing
@@ -112,20 +112,23 @@ X_test, Y_test = X_all[test_start:, :], Y_all[test_start:, :]
 
 alpha = 0.0001
 epochs = 100
-batch_size = 250
+batch_size = 128
 
 x = tf.placeholder(dtype=tf.float32, shape=[None, 2304], name='Input')
 x_shaped = tf.reshape(x, [-1, 48, 48, 1])
 y = tf.placeholder(dtype=tf.float32, shape=[None, 7], name='Output')
 
-conv_layer1 = relu(conv2d(x_shaped, [5, 5, 1, 32]))
-max_pool_layer1 = max_pool(conv_layer1, [2, 2])
-conv_layer2 = relu(conv2d(max_pool_layer1, [5, 5, 32, 64]))
-max_pool_layer2 = max_pool(conv_layer2, [2, 2])
-conv_layer3 = relu(conv2d(max_pool_layer2, [5, 5, 64, 128]))
-max_pool_layer3 = max_pool(conv_layer3, [2, 2])
-fc_layer4 = fully_connected(max_pool_layer3, [6 * 6 * 128, 1000])
-y_predict = output_layer(fc_layer4, [1000, 7])
+layer1 = relu(conv2d(x_shaped, [5, 5, 1, 32], name='conv_1'))
+layer1 = max_pool(layer1, [2, 2])
+
+layer2 = relu(conv2d(layer1, [5, 5, 32, 64], name='conv_2'))
+layer2 = max_pool(layer2, [2, 2])
+
+layer3 = relu(conv2d(layer2, [5, 5, 64, 128], name='conv_3'))
+layer3 = max_pool(layer3, [2, 2])
+
+fc_layer4 = fully_connected(layer3, [6 * 6 * 128, 512], name='fc_4')
+y_predict = output_layer(fc_layer4, [512, 7], name='y_predict')
 
 entropy_cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=y_predict, labels=y))
 optimiser = tf.train.AdamOptimizer(learning_rate=alpha).minimize(entropy_cost)
