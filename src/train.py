@@ -114,20 +114,26 @@ alpha = 0.0001
 epochs = 100
 batch_size = 128
 
+#INPUT
 x = tf.placeholder(dtype=tf.float32, shape=[None, 2304], name='Input')
 x_shaped = tf.reshape(x, [-1, 48, 48, 1])
 y = tf.placeholder(dtype=tf.float32, shape=[None, 7], name='Output')
 
+# LAYER 1: 32 5X5 CONVOLUTIONS WITH RELU ACTIVATION, THEN MAXPOOL 2X2
 layer1 = relu(conv2d(x_shaped, [5, 5, 1, 32], name='conv_1'))
 layer1 = max_pool(layer1, [2, 2])
 
+# LAYER 2: 64 5X5 CONVOLUTIONS WITH RELU ACTIVATION, THEN MAXPOOL 2X2
 layer2 = relu(conv2d(layer1, [5, 5, 32, 64], name='conv_2'))
 layer2 = max_pool(layer2, [2, 2])
 
+# LAYER 1: 64 5X5 CONVOLUTIONS WITH RELU ACTIVATION, THEN MAXPOOL 2X2
 layer3 = relu(conv2d(layer2, [5, 5, 64, 128], name='conv_3'))
 layer3 = max_pool(layer3, [2, 2])
 
+# FULLY CONNECTED LAYER 512
 fc_layer4 = fully_connected(layer3, [6 * 6 * 128, 512], name='fc_4')
+# OUTPUT LAYER 7 EMOTIONS
 y_predict = output_layer(fc_layer4, [512, 7], name='y_predict')
 
 entropy_cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=y_predict, labels=y))
