@@ -7,12 +7,8 @@ import skimage.transform
 from scipy.misc import imread, imresize
 from skimage.color import rgb2grey
 from skimage.io import imshow, imshow_collection
+from load_data import load_data
 
-
-def softmax(x):
-    """Compute softmax values for each sets of scores in x."""
-    e_x = np.exp(x - np.max(x))
-    return e_x / e_x.sum(axis=0)
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
@@ -46,14 +42,12 @@ with tf.Session() as sess:
     feed_dict = {x: batch}
     result = sess.run(y_predict, feed_dict=feed_dict)
 
-    predicted_probs = []
     predicted = []
     for res in result:
-        predicted_probs.append(softmax(res))
         predicted.append(emotion_dict[np.argmax(res)])
-    
+
     emoji_imgs = []
-    for img, emotion in zip(originals, predicted):
+    for img, emotio in zip(originals, predicted):
         emoji = skimage.io.imread( './emojis/' + emotion + '.png')
         emoji = skimage.transform.resize(emoji, img.shape)
         emoji_imgs.extend([img, emoji])
