@@ -47,7 +47,7 @@ with tf.Session() as sess:
         predicted.append(emotion_dict[np.argmax(res)])
 
     emoji_imgs = []
-    for img, emotio in zip(originals, predicted):
+    for img, emotion in zip(originals, predicted):
         emoji = skimage.io.imread( './emojis/' + emotion + '.png')
         emoji = skimage.transform.resize(emoji, img.shape)
         emoji_imgs.extend([img, emoji])
