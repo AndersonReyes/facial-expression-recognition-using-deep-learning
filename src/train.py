@@ -6,44 +6,6 @@ import os
 from load_data import load_data
 
 
-def conv2d(x, filter_shape, name):
-    """
-        :x:     input layer  
-        :filter_shape:  (w, h, input_sz, output_sz)
-    """
-    assert len(filter_shape) == 4
-    W = tf.Variable(tf.truncated_normal(filter_shape, stddev=0.03))
-    B = tf.Variable(tf.constant(0.1, shape=[filter_shape[-1]]))
-    layer = tf.nn.conv2d(x, W, strides=[1, 1, 1, 1], padding='SAME', name=name) + B
-    return layer
-
-
-def relu(x):
-    return tf.nn.relu(x)
-
-
-def fully_connected(x, shape, name):
-    assert len(shape) == 2
-    W = tf.Variable(tf.truncated_normal(shape, stddev=0.03))
-    B = tf.Variable(tf.constant(0.1, shape=[shape[-1]]))
-    X_flat = tf.reshape(x, [-1, shape[0]])
-    layer = relu(tf.matmul(X_flat, W, name=name) + B)
-    return layer
-
-
-def output_layer(x, shape, name):
-    assert len(shape) == 2
-    W = tf.Variable(tf.truncated_normal(shape, stddev=0.03))
-    B = tf.Variable(tf.constant(0.1, shape=[shape[-1]]))
-    layer = tf.matmul(x, W, name='y_predict') + B
-    return layer
-
-
-def max_pool(x, pool_shape):
-    assert len(pool_shape) == 2
-    ksize = [1, pool_shape[0], pool_shape[1], 1]
-    return tf.nn.max_pool(x, ksize=ksize, strides=ksize, padding='SAME')
-
 emotion_dict = {0: 'Angry', 1: 'Disgust', 2: 'Fear', 3: 'Happy', 
                 4: 'Sad', 5: 'Surprise', 6: 'Neutral'}
 
@@ -56,34 +18,33 @@ X_train, Y_train = X_all[:test_start, :], Y_all[:test_start, :]
 X_test, Y_test = X_all[test_start:, :], Y_all[test_start:, :]
 
 alpha = 0.0001
-epochs = 100
-batch_size = 128
+epochs = 1000
+batch_size = 256
 
 #INPUT
-x = tf.placeholder(dtype=tf.float32, shape=[None, 2304], name='Input')
-x_shaped = tf.reshape(x, [-1, 48, 48, 1])
-y = tf.placeholder(dtype=tf.float32, shape=[None, 7], name='Output')
+input = tf.placeholder(dtype=tf.float32, shape=[None, 2304], name='Input')
+input_shaped = tf.reshape(input, [-1, 48, 48, 1])
+y = tf.placeholder(dtype=tf.int64, shape=[None, 7], name='Output')
 
-# LAYER 1: 32 5X5 CONVOLUTIONS WITH RELU ACTIVATION, THEN MAXPOOL 2X2
-layer1 = relu(conv2d(x_shaped, [5, 5, 1, 32], name='conv_1'))
-layer1 = max_pool(layer1, [2, 2])
+#  ARCHITECTURE
+layer1 = tf.layers.conv2d(input_shaped, filters=32, kernel_size=[5, 5],  padding='same', activation=tf.nn.relu, name='layer1')
+layer1 = tf.layers.max_pooling2d(layer1, pool_size=[2, 2], strides=2, name='layer1')
 
-# LAYER 2: 64 5X5 CONVOLUTIONS WITH RELU ACTIVATION, THEN MAXPOOL 2X2
-layer2 = relu(conv2d(layer1, [5, 5, 32, 64], name='conv_2'))
-layer2 = max_pool(layer2, [2, 2])
+layer2 = tf.layers.conv2d(layer1, filters=64, kernel_size=[5, 5], padding='same', activation=tf.nn.relu, name='layer2')
+layer2 = tf.layers.max_pooling2d(layer2, pool_size=[2, 2], strides=2, name='layer2')
 
-# LAYER 1: 64 5X5 CONVOLUTIONS WITH RELU ACTIVATION, THEN MAXPOOL 2X2
-layer3 = relu(conv2d(layer2, [5, 5, 64, 128], name='conv_3'))
-layer3 = max_pool(layer3, [2, 2])
+layer3 = tf.layers.conv2d(layer2, filters=128, kernel_size=[5, 5], padding='same', activation=tf.nn.relu, name='layer3')
+layer3 = tf.layers.max_pooling2d(layer3, pool_size=[2, 2], strides=2, name='layer3')
 
-# FULLY CONNECTED LAYER 512
-fc_layer4 = fully_connected(layer3, [6 * 6 * 128, 512], name='fc_4')
-# OUTPUT LAYER 7 EMOTIONS
-y_predict = output_layer(fc_layer4, [512, 7], name='y_predict')
+flattened = tf.reshape(layer3, [-1, 6 * 6 * 128], name='flattened')
+dense = tf.layers.dense(flattened, units=1024, activation=tf.nn.relu, name='dense_1024')
+logits = tf.layers.dense(dense, units=7, name='dense_7')
+probs = tf.nn.softmax(logits, name='softmax')
+y_predict = tf.argmax(logits, axis=1, name='y_predict')
 
-entropy_cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=y_predict, labels=y))
+entropy_cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=y))
 optimiser = tf.train.AdamOptimizer(learning_rate=alpha).minimize(entropy_cost)
-correct_prediction = tf.equal(tf.argmax(y, 1), tf.argmax(y_predict, 1))
+correct_prediction = tf.equal(y, y_predict)
 accurary = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
 init_op = tf.global_variables_initializer()
@@ -104,15 +65,15 @@ with tf.Session() as sess:
             idx = i*batch_size
             batch_x = X_train[idx: idx + batch_size]
             batch_y = Y_train[idx: idx + batch_size]
-            _, result = sess.run([optimiser, entropy_cost], feed_dict={x: batch_x, y: batch_y})
+            _, result = sess.run([optimiser, entropy_cost], feed_dict={input: batch_x, y: batch_y})
             avg_cost += result / n_batches
 
-        test_accuracy = sess.run(accurary, feed_dict={x: X_test, y: Y_test})
+        test_accuracy = sess.run(accurary, feed_dict={input: X_test, y: Y_test})
         print('Epoch:', (epoch + 1), 'cost = ', '{:.3f}'.format(avg_cost),
               ' test accuracy: {:.3f}'.format(test_accuracy))
 
     print('\nTraining Complete')
-    print('accurary:', sess.run(accurary, feed_dict={x: X_test, y: Y_test}))
-    saver.save(sess, '32_64_128_fc512_100epochs')
+    print('accurary:', sess.run(accurary, feed_dict={input: X_test, y: Y_test}))
+    saver.save(sess, 'model')
 
 writer.close()
