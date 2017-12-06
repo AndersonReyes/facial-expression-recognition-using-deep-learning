@@ -1,19 +1,5 @@
 # DeepFaceRecognition
-Facial Expression Recognition using tensorflow on the FER2013 dataset using convolutional networks. I got about 50% accurary.
+Facial Expression Recognition using tensorflow on the FER2013 dataset using convolutional networks. Both the deeper and shallow networks were trained on the cpu.
 
-Architecture is very simple:  
-Conv [32]  
-&darr;  
-Max Pool [2x2]  
-&darr;  
-Conv [64]  
-&darr;  
-Max Pool [2x2]  
-&darr;  
-Conv [128]  
-&darr;  
-Max Pool [2x2]  
-&darr;  
-Fully connected [1000]  
-&darr;  
-Softmax
+# Updates
+The shallow_train is the one with only a few layers got about 50% as stated above. The ipython notebook has a deeper net with dropout. That one got about 55%.
