@@ -13,15 +13,13 @@ X_all, Y_all = load_data('../data/fer2013.csv')
 assert len(X_all) == len(Y_all)
 
 # save 20% for testing
-test_start = int(.80 * len(X_all))
-X_train, Y_train = X_all[:test_start, :], Y_all[:test_start, :]
-X_test, Y_test = X_all[test_start:, :], Y_all[test_start:, :]
+X_train, Y_train, X_test, Y_test = train_test_split(X_all, Y_all, test_size=0.20, random_sate=20)
 
 alpha = 0.0001
 epochs = 70
 batch_size = 256
 
-#INPUT
+# INPUT
 input = tf.placeholder(dtype=tf.float32, shape=[None, 2304], name='Input')
 input_shaped = tf.reshape(input, [-1, 48, 48, 1])
 y = tf.placeholder(dtype=tf.float32, shape=[None, 7], name='Output')
@@ -56,6 +54,7 @@ init_op = tf.global_variables_initializer()
 
 
 saver = tf.train.Saver()
+history = {}
 
 # write output to a file
 file = open('../training_steps.txt', 'w')
@@ -69,13 +68,15 @@ with tf.Session() as sess:
         avg_cost = 0
 
         for i in range(n_batches):
-            idx = i*batch_size
+            idx = i * batch_size
             batch_x = X_train[idx: idx + batch_size]
             batch_y = Y_train[idx: idx + batch_size]
             _, result = sess.run([optimiser, entropy_cost], feed_dict={input: batch_x, y: batch_y})
             avg_cost += result / n_batches
 
         test_accuracy = sess.run(accurary, feed_dict={input: X_test, y: Y_test})
+        history[str(epoch)] = test_accuracy
+
         file.write('\nEpoch:' + str(epoch + 1) + 'cost = {:.3f}'.format(avg_cost) + ' test accuracy: {:.3f}'.format(test_accuracy))
 
     file.write('\nTraining Complete')
@@ -83,4 +84,5 @@ with tf.Session() as sess:
     file.close()	
     saver.save(sess, 'model-small')
 
-writer.close()
+df = pd.DataFrame(history.items(), columns=['epoch', 'accuracy'])
+df.to_csv('../models/small_model_training_accuracies.csv')

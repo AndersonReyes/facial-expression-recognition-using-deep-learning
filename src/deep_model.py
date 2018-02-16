@@ -14,9 +14,6 @@ X_all, Y_all = load_data('../data/fer2013.csv')
 assert len(X_all) == len(Y_all)
 
 # save 20% for testing
-# test_start = int(.80 * len(X_all))
-# X_train, Y_train = X_all[:test_start, :], Y_all[:test_start, :]
-# X_test, Y_test = X_all[test_start:, :], Y_all[test_start:, :]
 X_train, Y_train, X_test, Y_test = train_test_split(X_all, Y_all, test_size=0.20, random_sate=20)
 
 alpha = 0.0001
@@ -102,5 +99,6 @@ with tf.Session() as sess:
     print('\naccurary: {0}\n'.format(sess.run(accurary, feed_dict={input: X_test, y: Y_test})))
     file.close()
     saver.save(sess, 'model-deeper')
-    df = pd.DataFrame(history.items(), columns=['epoch', 'accuracy'])
-    df.to_csv('../models/deeper_model_training_accuracies.csv')
+
+df = pd.DataFrame(history.items(), columns=['epoch', 'accuracy'])
+df.to_csv('../models/deeper_model_training_accuracies.csv')
