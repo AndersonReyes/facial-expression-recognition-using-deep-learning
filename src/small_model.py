@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import csv
 import os
 from load_data import load_data
-from sklearn.model_selection import train_test_split
 
 
 emotion_dict = {0: 'Angry', 1: 'Disgust', 2: 'Fear', 3: 'Happy', 
